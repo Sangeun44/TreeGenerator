@@ -136,6 +136,7 @@ for pt in list_pts:
         if distance(pt.pos, node.pos) <= i_d:
             node.addPts(pt)
 
+list_newnodes = []
 for node in list_node:
     vec = [0,0,0]
     for pt in node.pts:
@@ -143,17 +144,20 @@ for node in list_node:
         unit_vec = [diff[0]/length(diff), diff[1]/length(diff), diff[2]/length(diff)]
         vec = [vec[0] + unit_vec[0], vec[1] + unit_vec[1], vec[2]+unit_vec[2]]
         print vec
-    instanceResult = cmds.instance(transformName, name=transformName+'_instance#')
+        
+    instanceResult = cmds.polyCylinder(transformName, name=transformName+'_instance#')
     cmds.parent(instanceResult, instanceGroupName)
     new_loc = [vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2]]
     cmds.move(vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2], instanceResult) 
     list_cyl.append(new_loc)
     node = Node(new_loc)
-    list_node.append(node)
+    list_newnodes.append(node)
     node.addChild(node)
         
-        
-    
+list_node.extend(list_newnodes)
+print len(list_newnodes)        
+print len(list_node)        
+
     
 
     
