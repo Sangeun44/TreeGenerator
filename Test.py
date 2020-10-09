@@ -5,8 +5,9 @@ import numpy as np
 import scipy as sp
 import math
 
+from anytree import Node, RenderTree, NodeMixin
 
-N = 700
+N = 10
 x = -10 + 10* np.random.rand(N)
 y = 3 +   10* np.random.rand(N)
 z = -10 + 10*np.random.rand(N)
@@ -32,53 +33,51 @@ for i in range(N):
 cmds.hide(transformName)
 boundPts = cmds.exactWorldBoundingBox(transformName+'_instance_grp1')
 
+
 #with the random points, start from a beginning tree node
 
-class Node:
-    def __init__(self, pos):
+class MyBaseClass(object):
+    foo = 4
+    
+class TreeNode(MyBaseClass, NodeMixin):
+    def __init__(self, name, pos, pts=None, parent=None, children=None):
+        super(MyClass, self).__init__()        
+        self.name = name
         self.pos = pos 
-        self.children = []
+        if children:
+            self.children = children
         self.parent = None
-        self.pts = []
+        self.pts = pts
     
     def addChild(self, pos):
         print("added child")
         if isinstance(pos, list):
             new_node =(Node(pos))
             new_node.parent = self            
-            self.children = new_node
+            self.children.append(new_node)
         if isinstance(pos, Node):
             pos.parent = self            
-            self.children.append(pos)
-    '''    
-    def printTree(self):
-        if self.children:
-            for child in self.children:
-                child.printTree()
-        print(self.pos)
-    '''
-    '''
-    def addLast(self, pos): 
-        root = self      
-        if not root.children:
-            root.addChild(pos)
-        while(root.children):
-            root = root.children[0]
-            if(len(root.children) == 0):
-                root.addChild(pos)
-                break
-    '''            
+            self.children.append(pos)   
+          
     def addPts(self, pos):
         print('added point')
         self.pts.append(pos)
-                
-                
-#tree formation           
+
+                    
+root = TreeNode('0', [0, 0, 0])
+node1 = TreeNode('1',[1, 0, 0], parent=root)
+
+#for pre, fill, node in RenderTree(root):
+#    print("%s%s" % (pre, node.name)) 
+         
+#tree formation     
+    
 list_node =[]
 
 midx = (boundPts[3] + boundPts[0])/2
 midz = (boundPts[5] + boundPts[2])/2
-root = Node([midx,0,midz])
+#root = Node([midx,0,midz])
+list_node.append(root)
 
 cmds.polySphere(r=0.01)
 result = cmds.ls(orderedSelection = True)
@@ -86,17 +85,20 @@ result = cmds.ls(orderedSelection = True)
 transformName = result[0]
 instanceGroupName = cmds.group(empty=True, name=transformName+'_instance_grp#')
 
+init_node = 10
 #create root
-for i in range(10):
+for i in range(1, init_node):
     instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')    
     cmds.parent(instanceResult, instanceGroupName)
     cmds.move(midx, i*0.3, midz, instanceResult) 
  
     node = Node([midx, i*0.3, midz])
     list_node.append(node)
-    root.addChild([midx, i*0.3, midz])
+    root.addChild(node)
     root = node
-    
+
+root.printTree()
+
 cmds.hide(transformName)
 
 def distance (p1, p2):
@@ -114,7 +116,7 @@ k_d = 0.4
 cmds.select( clear=True )
 result = cmds.ls(orderedSelection = True)
 
-iter = 10
+iter = 1
 print("iter:",iter)
 
 for i in range(iter):    
@@ -173,18 +175,14 @@ for i in range(iter):
          
     list_node.extend(list_newnodes)
     
-  if self.children:
-            for child in self.children:
-                child.printTree()
-        print(self.pos)
 
- 
-                                
-
+def createBranches(node):
+    if node.children:
+        for child in node.children:
+            print('node:', child.pos)
     
+createBranches(root)
 
-    
-   
 
         
     
