@@ -6,13 +6,13 @@ import scipy as sp
 import math
 
 
-N = 700
-x = -10 + 10* np.random.rand(N)
-y = 3 +   10* np.random.rand(N)
-z = -10 + 10*np.random.rand(N)
+N = 100
+x = -5 + 5* np.random.rand(N)
+y = 0.5 + 5 * np.random.rand(N)
+z = -5 + 5*np.random.rand(N)
 
 #make a list of spheres/points
-cmds.polySphere(r=0.07)
+cmds.polySphere(r=0.01)
 result = cmds.ls(orderedSelection = True)
 transformName = result[0]
 instanceGroupName = cmds.group(empty=True, name=transformName+'_instance_grp#')
@@ -74,6 +74,7 @@ class Node:
                 
                 
 #tree formation           
+list_cyl = []
 list_node =[]
 
 midx = (boundPts[3] + boundPts[0])/2
@@ -88,14 +89,15 @@ instanceGroupName = cmds.group(empty=True, name=transformName+'_instance_grp#')
 
 #create root
 for i in range(10):
-    instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')    
+    instanceResult = cmds.polySphere(transformName,r=0.05, name=transformName+'_instance#')    
     cmds.parent(instanceResult, instanceGroupName)
-    cmds.move(midx, i*0.3, midz, instanceResult) 
+    cmds.move(midx, i*0.1, midz, instanceResult) 
+    list_cyl.append([midx, i*0.1, midz])
  
-    node = Node([midx, i*0.3, midz])
+    node = Node([midx, i*0.1, midz])
     list_node.append(node)
-    root.addChild([midx, i*0.3, midz])
     root = node
+    root.addChild([midx, i*0.1, midz])
     
 cmds.hide(transformName)
 
@@ -107,21 +109,21 @@ def length (p1):
     
 #try out space colonization:
 #radius of influence
-i_d = 1.2
-k_d = 0.4
+i_d = 1
+k_d = 3
 
 #check through the pts and find the closest tree node
 cmds.select( clear=True )
 result = cmds.ls(orderedSelection = True)
 
-iter = 10
+iter = 3
 print("iter:",iter)
 
 for i in range(iter):    
     #find points close in influence distance
     for pt in list_pts:
         for node in list_node:
-            if distance(pt.pos, node.pos) < i_d:
+            if distance(pt.pos, node.pos) <= i_d:
                 node.addPts(pt)
          
     instanceGroupName = cmds.group(empty=True, name='newnode_instance_grp#')
@@ -145,7 +147,7 @@ for i in range(iter):
             print("final vector:",vec)
 
             #create new node
-            instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')
+            instanceResult = cmds.polySphere(transformName,r=0.05, name=transformName+'_instance#')
             cmds.parent(instanceResult, instanceGroupName)                       
             new_loc = [vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2]]
             cmds.move(new_loc[0], new_loc[1], new_loc[2], instanceResult) 
@@ -162,24 +164,21 @@ for i in range(iter):
             node.addChild(node)
 
     #check for kill distance
-    for node in list_newnodes:
-        for pt in list_pts:
-            dist = distance(pt.pos, node.pos)
-            if dist <= k_d:
-                list_pts.remove(pt)
+    for node in list_node:
+        if node.children:
+            for child in node.children:
+                new_pos = child.pos
+                for pt in node.pts:
+                    dist = distance(pt.pos, new_pos)
+                    if dist <= k_d:
+                        list_pts.remove(pt)
                     
     for node in list_node:
-        node.pts = []   
-         
+        node.pts = []    
     list_node.extend(list_newnodes)
-    
-  if self.children:
-            for child in self.children:
-                child.printTree()
-        print(self.pos)
-
  
                                 
+print('num of nodes now:',len(list_node))        
 
     
 
