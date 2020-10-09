@@ -8,9 +8,9 @@ import math
 
 sys.stdout.write('Hello world')
 
-N = 100
+N = 500
 x = -10 + 10* np.random.rand(N)
-y = 10 * np.random.rand(N)
+y = 1 + 10 * np.random.rand(N)
 z = -10 + 10*np.random.rand(N)
 
 #make a list of spheres/points
@@ -27,8 +27,6 @@ class Point:
     def __init__(self, pos):
         self.pos = pos #pos
     
-    
-        
     
 list_sps = []
 list_pts = []
@@ -93,7 +91,6 @@ class Node:
         self.pts.append(pos)
                 
                 
-       
                 
 #tree.PrintTree()
 
@@ -115,14 +112,6 @@ root.printTree()
 cmds.hide(transformName)
 boundTree = cmds.exactWorldBoundingBox(instanceResult)
 
-#radius of influence
-i_d = 2
-k_d = 5
-
-#check through the pts and find the closest tree node
-cmds.select( clear=True )
-
-result = cmds.ls(orderedSelection = True)
 
 def distance (p1, p2):
     return math.sqrt( ((p1[0]-p2[0])**2)+((p1[1]-p2[1])**2)+((p1[2]-p2[2])**2) )
@@ -130,33 +119,80 @@ def distance (p1, p2):
 def length (p1):
     return math.sqrt( ((p1[0])**2)+((p1[1])**2)+((p1[2])**2) )
     
-    
-for pt in list_pts:
-    for node in list_node:
-        if distance(pt.pos, node.pos) <= i_d:
-            node.addPts(pt)
+#try out space colonization:
+#radius of influence
+i_d = 2
+k_d = 5
 
-list_newnodes = []
-for node in list_node:
-    vec = [0,0,0]
-    for pt in node.pts:
-        diff = [pt.pos[0] - node.pos[0], pt.pos[1] - node.pos[1], pt.pos[2] - node.pos[2]]
-        unit_vec = [diff[0]/length(diff), diff[1]/length(diff), diff[2]/length(diff)]
-        vec = [vec[0] + unit_vec[0], vec[1] + unit_vec[1], vec[2]+unit_vec[2]]
-        print vec
-        
-    instanceResult = cmds.polyCylinder(transformName, name=transformName+'_instance#')
-    cmds.parent(instanceResult, instanceGroupName)
-    new_loc = [vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2]]
-    cmds.move(vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2], instanceResult) 
-    list_cyl.append(new_loc)
-    node = Node(new_loc)
-    list_newnodes.append(node)
-    node.addChild(node)
-        
+#check through the pts and find the closest tree node
+cmds.select( clear=True )
+result = cmds.ls(orderedSelection = True)
+
+iter = 5
+print("iter:",iter)
+
+for i in range(0,iter):
+    print("iteration:",i)
+    #find points close in influence distance
+    for pt in list_pts:
+        for node in list_node:
+            if distance(pt.pos, node.pos) <= i_d:
+                node.addPts(pt)
+                
+    instanceGroupName = cmds.group(empty=True, name='newnode_instance_grp#')
+    
+    list_newnodes = []
+
+    #for each node, find the sum of vectors 
+    for node in list_node:
+        vec = [0,0,0]
+                
+        if len(node.pts) != 0:
+            for pt in node.pts:
+                #find vector per each influence point
+                diff = [pt.pos[0] - node.pos[0], pt.pos[1] - node.pos[1], pt.pos[2] - node.pos[2]]
+                #make the vector into unit vector
+                unit_vec = [diff[0]/length(diff), diff[1]/length(diff), diff[2]/length(diff)]
+                #add it to the sum of vectors
+                vec = [vec[0] + unit_vec[0], vec[1] + unit_vec[1], vec[2]+unit_vec[2]]
+                
+            #normalize the sum vector
+            vec = [vec[0]/length(vec), vec[1]/length(vec), vec[2]/length(vec)]
+            print("final vector:",vec)
+
+            #create new node
+            instanceResult = cmds.polyCylinder(transformName, name=transformName+'_instance#')
+            cmds.scale(0.11,0.1,0.1, instanceResult)
+            
+            new_loc = [vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2]]
+            print("final position:",vec)
+            cmds.move(new_loc[0], new_loc[1], new_loc[2], instanceResult) 
+            
+            #add a new cylinder to list
+            list_cyl.append(new_loc)
+            node = Node(new_loc)
+            
+            #add to new nodes list
+            list_newnodes.append(node)
+            #add to tree nodes
+            node.addChild(node)
+
+            #check for kill distance
+            print("number:",len(list_pts))
+            for pt in node.pts:
+                new_pos = node.child[0].pos
+                dist = distance(new_pos, pt.pos)
+                if dist <= k_d:
+                    list_pts.remove(pt)
+                    node.pts.remove(pt)
+                    print("listpoints:",len(list_pts))
+                    
+                    
+                
+ 
 list_node.extend(list_newnodes)
-print len(list_newnodes)        
-print len(list_node)        
+print('num of new nodes:',len(list_newnodes))    
+print('num of nodes before:',len(list_node))        
 
     
 
