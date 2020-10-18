@@ -4,10 +4,13 @@ import maya.cmds as cmds
 import numpy as np
 import scipy as sp
 import math
+import vector3d
 
 from anytree import Node, RenderTree, NodeMixin
+vector = vector3d.vector.Vector(0,1,0)
 
-N = 300
+
+N = 700
 x = -10 + 10* np.random.rand(N)
 y = 1 +   10* np.random.rand(N)
 z = -10 + 10*np.random.rand(N)
@@ -70,7 +73,7 @@ list_node =[]
 midx = (boundPts[3] + boundPts[0])/2
 midz = (boundPts[5] + boundPts[2])/2
 
-root = TreeNode(0, [midx, 0, midz])
+root = TreeNode('root', [midx, 0, midz])
 list_node.append(root)
 
 cmds.polySphere(r=0.07)
@@ -78,7 +81,7 @@ result = cmds.ls(orderedSelection = True)
 transformName = result[0]
 instanceGroupName = cmds.group(empty=True, name=transformName+'_instance_grp#')
 
-init_node = 10
+init_node = 6
 init = root
 #create root
 for i in range(1, init_node):
@@ -103,17 +106,18 @@ def length (p1):
     
 #try out space colonization:
 #radius of influence/kill distance
-i_d = 0.6
-k_d = 0.5
+i_d = 1.2
+k_d = 0.8
 
 #check through the pts and find the closest tree node
 cmds.select( clear=True )
 result = cmds.ls(orderedSelection = True)
 
-iter = 3
+iter = 7
 print("iterations:",iter)
 
-for i in range(iter):    
+for i in range(iter):  
+  
     #find points close in influence distance
     for pt in list_pts:
         for node in list_node:
@@ -142,11 +146,12 @@ for i in range(iter):
 
             #create new node
             instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')
-            cmds.parent(instanceResult, instanceGroupName)                       
+            cmds.parent(instanceResult, instanceGroupName) 
+                                  
             new_loc = [vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2]]
             cmds.move(new_loc[0], new_loc[1], new_loc[2], instanceResult) 
             
-            print("final position:",new_loc)
+            print("final position:", new_loc)
 
             #add to new nodes list
             node = TreeNode('node' + str(i), new_loc, parent=node)
@@ -169,14 +174,33 @@ for i in range(iter):
 for pre, fill, node in RenderTree(root):
     print("%s%s" % (pre, node.name)) 
         
-'''
+
 def createBranches(node):
     if node.children:
         for child in node.children:
             print('node:', child.pos)
-    
-createBranches(root)
 
-'''
-        
+cmds.polyCylinder(r=0.07, height=0.5)
+result = cmds.ls(orderedSelection = True)
+transformName = result[0]
+instanceGroupName = cmds.group(empty=True, name=transformName+'_branchesGroup#')
+
+def angle(v1, v2, acute):
+# v1 is your firsr vector
+# v2 is your second vector
+    angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+    if (acute == True):
+        return angle
+    else:
+        return 2 * np.pi - angle
+            
+#createBranches(root)
+for pre, fill, node in RenderTree(root):
+    instanceResult = cmds.polyCylinder(transformName,r=0.1, name=transformName+'_branch#')
+    cmds.parent(instanceResult, instanceGroupName)                                  
+    cmds.move(node.pos[0], node.pos[1], node.pos[2], instanceResult) 
+
+    print("%s%s%s" % (pre, node.pos, node.name)) 
+
+     
     
