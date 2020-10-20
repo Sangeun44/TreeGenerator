@@ -12,10 +12,10 @@ import vector3d
 from anytree import Node, RenderTree, NodeMixin
 vector = vector3d.vector.Vector(0,1,0)
 
-N = 500
-x = -5 + 5* np.random.rand(N)
-y = 1 +  5* np.random.rand(N)
-z = -5 + 5*np.random.rand(N)
+N = 900
+x = -3 + 3* np.random.rand(N)
+y = 2 +  5* np.random.rand(N)
+z = -3 + 3*np.random.rand(N)
 
 #make a list of spheres/points
 cmds.polySphere(r=0.07)
@@ -82,7 +82,7 @@ root = TreeNode('root', [midx, 0, midz])
 
 list_node =[root]
 
-init_node_num = 9
+init_node_num = 12
 
 init = root
 
@@ -115,14 +115,14 @@ def length (p1):
 
 #try out space colonization:
 #radius of influence/kill distance
-i_d = 0.9
+i_d = 0.5
 k_d = 0.4
 
 #check through the pts and find the closest tree node
 cmds.select( clear=True )
 result = cmds.ls(orderedSelection = True)
 
-iter = 9
+iter = 15
 it_pts = list_pts
 
 for i in range(iter):  
@@ -221,19 +221,17 @@ def recurse_tree(root) :
     
 
 recurse_tree(root)
-'''        
-for pre, fill, node in RenderTree(root):
-    rad = 0.02
-    if node.children:
-        for m in node.children:
-            print("name:",m.name)
-'''            
+       
 for pre, fill, node in RenderTree(root):
     if node.parent:
         axis = [node.pos[0]-node.parent.pos[0],node.pos[1]-node.parent.pos[1],node.pos[2]-node.parent.pos[2]] 
         length = distance(node.parent.pos, node.pos)
         pos = midpoint(node.parent.pos, node.pos)
-        cylinder2 = cmds.polyCylinder(transformName,r=node.rad, axis=axis, height=length, name=transformName+'_branch#')
+        sphere2 = cmds.polySphere(r=node.rad, name='circle_node#')
+        cmds.parent(sphere2, instanceGroupName)                                  
+        cmds.move(node.pos[0], node.pos[1], node.pos[2], sphere2)
+        
+        cylinder2 = cmds.polyCylinder(r=node.rad, axis=axis, height=length, name=transformName+'_branch#')
         cmds.parent(cylinder2, instanceGroupName)                                  
         cmds.move(pos[0], pos[1], pos[2], cylinder2)  
 
