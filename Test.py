@@ -12,9 +12,9 @@ import vector3d
 from anytree import Node, RenderTree, NodeMixin
 vector = vector3d.vector.Vector(0,1,0)
 
-N = 50
+N = 500
 x = -5 + 5* np.random.rand(N)
-y = 1 +  4* np.random.rand(N)
+y = 1 +  5* np.random.rand(N)
 z = -5 + 5*np.random.rand(N)
 
 #make a list of spheres/points
@@ -54,7 +54,7 @@ class TreeNode(MyBaseClass, NodeMixin):
              self.children = children
              
     def addChild(self, node):
-        print("added child")
+        #print("added child")
         if self.children:
             np.append(self.children, node)             
           
@@ -83,6 +83,7 @@ root = TreeNode('root', [midx, 0, midz])
 list_node =[root]
 
 init_node_num = 9
+
 init = root
 
 for i in range(1, init_node_num):
@@ -96,8 +97,8 @@ for i in range(1, init_node_num):
     list_node.append(init)
     init = node
 
-for pre, fill, node in RenderTree(root):
-    print("%s%s" % (pre, node.name)) 
+#for pre, fill, node in RenderTree(root):
+#    print("%s%s" % (pre, node.name)) 
     
 cmds.hide(transformName)
 
@@ -114,20 +115,22 @@ def length (p1):
 
 #try out space colonization:
 #radius of influence/kill distance
-i_d = 1.5
+i_d = 0.9
 k_d = 0.4
 
 #check through the pts and find the closest tree node
 cmds.select( clear=True )
 result = cmds.ls(orderedSelection = True)
 
-iter = 2
+iter = 9
+it_pts = list_pts
+
 for i in range(iter):  
     #find points close in influence distance
-    for pt in list_pts:
+    for pt in it_pts:
         for node in list_node:
             if distance(pt.pos, node.pos) < i_d:
-                node.addPts(pt)
+                node.addPts(pt)                
          
     instanceGroupName = cmds.group(empty=True, name='newnode_instance_grp#')
     list_newnodes = []
@@ -147,7 +150,7 @@ for i in range(iter):
             #normalize the sum vector
             len = length(vec)
             vec = [vec[0]/len, vec[1]/len, vec[2]/len]
-            print("final vector:",vec)
+            #print("final vector:",vec)
 
             #create new node
             instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')
@@ -155,12 +158,12 @@ for i in range(iter):
                                   
             new_loc = [vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2]]
             cmds.move(new_loc[0], new_loc[1], new_loc[2], instanceResult) 
-            print("final position:", new_loc)
+            #print("final position:", new_loc)
             list_tri_pos.append(new_loc)
 
             #add to new nodes list
-            new_node = TreeNode('node' + str(i), new_loc, parent=node)
-            print("this node has a parent:",new_node.parent.name)
+            new_node = TreeNode(node.name + ' child ' + str(i), new_loc, parent=node)
+            #print("this node has a parent:",new_node.parent.name)
             list_newnodes.append(new_node)
             
             #add to tree nodes
@@ -180,18 +183,10 @@ for i in range(iter):
         node.pts = []   
          
     list_node.extend(list_newnodes)
+      
     
-    
-    
-    
-for pre, fill, node in RenderTree(root):
-    print("%s%s" % (pre, node.name)) 
-
-       
-def createBranches(node):
-    if node.children:
-        for child in node.children:
-            print('node:', child.pos)
+#for pre, fill, node in RenderTree(root):
+#    print("%s%s" % (pre, node.name)) 
 
 #print(list_tri_pos)
 #list_triangle = np.asarray(list_tri_pos)
@@ -205,19 +200,43 @@ result = cmds.ls(orderedSelection = True)
 transformName = result[0]
 instanceGroupName = cmds.group(empty=True, name=transformName+'_branchesGroup#')
 
+def midpoint(p1, p2):
+    return [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2, (p1[2]+p2[2])/2]
  
 #createBranches(root)
-for pre, fill, node in RenderTree(root):
-    print("%s%s" % (pre, node.name)) 
 
+#calculate radius
+def recurse_tree(root) :
+    if root.children:
+        rad = 0
+        n = 2.05
+        for node in root.children:
+            rad += (recurse_tree(node))**n
+        root.rad = rad**(1/n)
+    else:
+        #no children
+        root.rad = 0.05
+#    print("name:", root.name, " RADII:", root.rad)
+    return root.rad
+    
+
+recurse_tree(root)
+'''        
+for pre, fill, node in RenderTree(root):
+    rad = 0.02
+    if node.children:
+        for m in node.children:
+            print("name:",m.name)
+'''            
+for pre, fill, node in RenderTree(root):
     if node.parent:
-        print("there is a parent")
         axis = [node.pos[0]-node.parent.pos[0],node.pos[1]-node.parent.pos[1],node.pos[2]-node.parent.pos[2]] 
         length = distance(node.parent.pos, node.pos)
-        cylinder2 = cmds.polyCylinder(transformName,r=0.02, axis=axis, height=length, name=transformName+'_branch#')
+        pos = midpoint(node.parent.pos, node.pos)
+        cylinder2 = cmds.polyCylinder(transformName,r=node.rad, axis=axis, height=length, name=transformName+'_branch#')
         cmds.parent(cylinder2, instanceGroupName)                                  
-        cmds.move(node.pos[0], node.pos[1], node.pos[2], cylinder2)  
-        print("%s %s" % (node.parent.name, node.name)) 
+        cmds.move(pos[0], pos[1], pos[2], cylinder2)  
 
-     
+cmds.hide(transformName)
+cmds.delete(transformName)
     
