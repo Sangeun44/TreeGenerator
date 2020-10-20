@@ -23,6 +23,15 @@ class MyClass(MyBaseClass, NodeMixin):
          self.parent = parent
          if children:
              self.children = children
+    def addChild(self, pos):
+        print("added child")
+        if isinstance(pos, list):
+            new_node =(Node(pos))
+            new_node.parent = self            
+            self.children.append(new_node)
+        if isinstance(pos, Node):
+            pos.parent = self            
+            self.children.append(pos)  
 
 my0 = MyClass("my0", [0,0,0])
 my1 = MyClass("my1", [1,0,0], parent=my0)
