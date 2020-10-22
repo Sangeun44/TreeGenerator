@@ -3,29 +3,30 @@ import sys
 import maya.cmds as cmds
 import numpy as np
 import scipy as sp
+
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from scipy.spatial import Delaunay
-
 import math
-import vector3d
 
 from anytree import Node, RenderTree, NodeMixin
-vector = vector3d.vector.Vector(0,1,0)
 
-N = 900
-x = -3 + 3* np.random.rand(N)
-y = 2 +  5* np.random.rand(N)
-z = -3 + 3*np.random.rand(N)
+#randomize---------------------------------------------------------------------
 
-#make a list of spheres/points
+N = 10
+x = -5 + 5* np.random.rand(N)
+y = 0.5 +  5* np.random.rand(N)
+z = -5 + 5*np.random.rand(N)
+
+#make a list of spheres/points--------------------------------------------------
+
+class Point:
+    def __init__(self, pos):
+        self.pos = pos
+        
 cmds.polySphere(r=0.07)
 result = cmds.ls(orderedSelection = True)
 transformName = result[0]
 instanceGroupName = cmds.group(empty=True, name=transformName+'_instance_grp#')
-
-class Point:
-    def __init__(self, pos):
-        self.pos = pos 
     
 #create instances and add to group    
 list_pts = []
@@ -34,10 +35,10 @@ for i in range(N):
     cmds.parent(instanceResult, instanceGroupName)
     cmds.move(x[i], y[i], z[i], instanceResult)
     list_pts.append(Point([ x[i], y[i], z[i] ]))
-   
+ 
 cmds.hide(transformName)
 
-#with the random points, start from a beginning tree node
+#with the random points, start from a beginning tree node----------------------------
 
 class MyBaseClass(object):
     foo = 4
@@ -54,25 +55,38 @@ class TreeNode(MyBaseClass, NodeMixin):
              self.children = children
              
     def addChild(self, node):
-        #print("added child")
         if self.children:
             np.append(self.children, node)             
           
     def addPts(self, pos):
-        #print('added point')
         if self.pts == None:
             self.pts = [pos]
         else: 
             self.pts.append(pos)
 
 
-#for pre, fill, node in RenderTree(root):
-#    print("%s%s" % (pre, node.name)) 
-#tree formation     
+#tree formation--------------------------------------------------------------
+  
 boundPts = cmds.exactWorldBoundingBox(transformName+'_instance_grp1')
+
+#midpoint
 midx = (boundPts[3] + boundPts[0])/2
 midz = (boundPts[5] + boundPts[2])/2
 
+#limits
+xmin1 = [boundPts[0], boundPts[1], boundPts[2]]
+xmin12 = [boundPts[0], boundPts[1], boundPts[5]]
+xmin2 = [boundPts[0], boundPts[4], boundPts[2]]
+xmin22 = [boundPts[0], boundPts[4], boundPts[5]]
+
+xmax1 = [boundPts[3], boundPts[1], boundPts[2]]
+xmax12 = [boundPts[3], boundPts[1], boundPts[5]]
+xmax2 = [boundPts[3], boundPts[4], boundPts[2]]
+xmax22 = [boundPts[3], boundPts[4], boundPts[5]]
+
+points_lim = [xmin1, xmin12, xmin2, xmin22, xmax1, xmax12, xmax2, xmax22]
+
+#make initial nodes-----------------------------
 cmds.polySphere(r=0.07)
 result = cmds.ls(orderedSelection = True)
 transformName = result[0]
@@ -81,12 +95,13 @@ instanceGroupName = cmds.group(empty=True, name=transformName+'_instance_grp#')
 root = TreeNode('root', [midx, 0, midz])
 
 list_node =[root]
-
-init_node_num = 12
-
+init_num = 5
 init = root
 
-for i in range(1, init_node_num):
+points=points_lim
+points.append(root.pos)
+
+for i in range(1, init_num):
     instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')    
     cmds.parent(instanceResult, instanceGroupName)
     
@@ -96,12 +111,11 @@ for i in range(1, init_node_num):
     node = TreeNode('rootnode:'+str(i), pos, parent=init)
     list_node.append(init)
     init = node
+    points.append(pos)
 
-#for pre, fill, node in RenderTree(root):
-#    print("%s%s" % (pre, node.name)) 
-    
 cmds.hide(transformName)
 
+#math functions--------------------------------------------------------------------
 
 def angle(v1, v2):
     return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
@@ -110,31 +124,41 @@ def distance (p1, p2):
     return math.sqrt( ((p1[0]-p2[0])**2)+((p1[1]-p2[1])**2)+((p1[2]-p2[2])**2) )
 
 def length (p1):
-    return ( ((p1[0])**2)+((p1[1])**2)+((p1[2])**2) )
-    
+    return ( ((p1[0])**2)+((p1[1])**2)+((p1[2])**2) )    
 
-#try out space colonization:
+def midpoint(p1, p2):
+    return [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2, (p1[2]+p2[2])/2]
+ 
+#try out space colonization---------------------------------------------------------
+    
 #radius of influence/kill distance
-i_d = 0.5
-k_d = 0.4
+i_d = 1.2
+k_d = 0.8
 
 #check through the pts and find the closest tree node
 cmds.select( clear=True )
 result = cmds.ls(orderedSelection = True)
 
-iter = 15
-it_pts = list_pts
-
+iter = 2
 for i in range(iter):  
+    points_np = np.asarray(points)
+    vor = Voronoi(points_np)
     #find points close in influence distance
-    for pt in it_pts:
+    #save in sets
+    for pt in list_pts:
+        point_index = np.argmin(np.sum((points_np - pt.pos)**2, axis=1))
+        point = vor.points[point_index]
+    
         for node in list_node:
-            if distance(pt.pos, node.pos) < i_d:
-                node.addPts(pt)                
-         
+            if node.pos[0] == point[0] and node.pos[1] == point[1] and node.pos[2] == point[2]:
+                if distance(pt.pos, node.pos) < i_d:
+                    node.addPts(pt) 
+    
+    #create new 
     instanceGroupName = cmds.group(empty=True, name='newnode_instance_grp#')
     list_newnodes = []
-
+    new_points = []
+    
     #for each node, find the sum of vectors 
     for node in list_node:
         vec = [0,0,0]  
@@ -150,7 +174,6 @@ for i in range(iter):
             #normalize the sum vector
             len = length(vec)
             vec = [vec[0]/len, vec[1]/len, vec[2]/len]
-            #print("final vector:",vec)
 
             #create new node
             instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')
@@ -158,52 +181,34 @@ for i in range(iter):
                                   
             new_loc = [vec[0] + node.pos[0], vec[1] + node.pos[1], vec[2] + node.pos[2]]
             cmds.move(new_loc[0], new_loc[1], new_loc[2], instanceResult) 
-            #print("final position:", new_loc)
-            list_tri_pos.append(new_loc)
 
             #add to new nodes list
             new_node = TreeNode(node.name + ' child ' + str(i), new_loc, parent=node)
-            #print("this node has a parent:",new_node.parent.name)
             list_newnodes.append(new_node)
+            new_points.append(new_loc)
             
-            #add to tree nodes
-            #if node.children:
-                #print(node.children)
-            #else:
-                #node.children = np.array([new_node])
-
     #check for kill distance
-    for node in list_newnodes:
-        for pt in list_pts:
-            dist = distance(pt.pos, node.pos)
-            if dist <= k_d:
-                list_pts.remove(pt)
+    points.extend(new_points)
+    
+    new_points_np = np.asarray(new_points)
+    vor = Voronoi(new_points_np)
+    for pt in list_pts:
+        point_index = np.argmin(np.sum((new_points_np - pt.pos)**2, axis=1))
+        point_pos = vor.points[point_index]
+        dist = distance(pt.pos, point_pos)
+        if dist <= k_d:
+            list_pts.remove(pt)
                     
     for node in list_node:
         node.pts = []   
          
     list_node.extend(list_newnodes)
-      
     
-#for pre, fill, node in RenderTree(root):
-#    print("%s%s" % (pre, node.name)) 
-
-#print(list_tri_pos)
-#list_triangle = np.asarray(list_tri_pos)
-#tri = Delaunay(list_triangle)
-
-#print(tri.simplices)
-
 
 cmds.polyCylinder(r=0.07, height=0.02)
 result = cmds.ls(orderedSelection = True)
 transformName = result[0]
 instanceGroupName = cmds.group(empty=True, name=transformName+'_branchesGroup#')
-
-def midpoint(p1, p2):
-    return [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2, (p1[2]+p2[2])/2]
- 
-#createBranches(root)
 
 #calculate radius
 def recurse_tree(root) :
@@ -219,6 +224,9 @@ def recurse_tree(root) :
 #    print("name:", root.name, " RADII:", root.rad)
     return root.rad
     
+
+#for pre, fill, node in RenderTree(root):
+#    print("%s%s" % (pre, node.name)) 
 
 recurse_tree(root)
        
@@ -237,4 +245,3 @@ for pre, fill, node in RenderTree(root):
 
 cmds.hide(transformName)
 cmds.delete(transformName)
-    
