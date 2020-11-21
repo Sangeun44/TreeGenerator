@@ -12,57 +12,94 @@ import math
 from anytree import Node, RenderTree, NodeMixin
 
 def createUI( pWindowTitle, pApplyCallback) :
+    
     windowID = 'myWindowID'
+    
     if cmds.window(windowID, exists=True):
         cmds.deleteUI(windowID)
+    
     cmds.window( windowID, title=pWindowTitle, sizeable=False, resizeToFitChildren=True )
     
-    cmds.rowColumnLayout( numberOfColumns=3, columnWidth=[(1,75), (2, 60), (3,60)], columnOffset=[(1, 'right',3)] )
-    cmds.text(label='Time:')
-    startTimeField = cmds.intField(value=cmds.playbackOptions(q=True, minTime=True))
-    endTimeField = cmds.intField(value=cmds.playbackOptions(q=True, maxTime=True))
+    cmds.rowColumnLayout( numberOfColumns=3, columnWidth=[(1,150), (2, 60), (3,60)], columnOffset=[(1, 'right', 3)] )
     
-    cmds.text(label='attribute')
-    targetAttributeField = cmds.textField(text='rotateY')
+    cmds.text(label='# Atraction points:')
+    attractPts = cmds.intField(value=900)
+    cmds.separator(h=10,style='none')
+
+    cmds.text(label='# Iterations:')
+    iter = cmds.intField(value=20)
     cmds.separator(h=10,style='none')
     
+    cmds.text(label='# Initial Nodes:')
+    int_node = cmds.intField(value=20)
+    cmds.separator(h=10,style='none')
+
+    cmds.text(label='Influence distance:')
+    i_rad = cmds.floatField(value=0.8)
+    cmds.separator(h=10,style='none')
+
+    cmds.text(label='Kill distance:')
+    k_rad = cmds.floatField(value=0.7)
+    cmds.separator(h=10,style='none')    
+        
+    cmds.text(label='Height of Trunk:')
+    trunk = cmds.floatField(value=0.7)
+    cmds.separator(h=10,style='none')
     
-    cmds.button(label='Apply', command=functools.partial(pApplyCallback, startTime, endTime, targetAttributeField))
+    cmds.text(label='')
+    circ = cmds.checkBox('Circle', value=False)
+    cmds.separator(h=10,style='none')
     
     def cancelCallback(*pArgs):
         if cmds.window(windowID, exists=True):
             cmds.deleteUI(windowID)
             
+    cmds.button(label='Apply', command=functools.partial(pApplyCallback, attractPts, iter, int_node, i_rad, k_rad, trunk, circ))
     cmds.button(label='Cancel', command=cancelCallback)
     cmds.showWindow()
-    
-def applyCallback(pStart, pEnd, pTarget, *pArgs):
-    print('Apply button pressed')
-    
-    startTime = cmds.intField(pStart, query=True, value=True)
-    endTime = cmds.intField(pEnd, query=True, value=True)
-    target = cmds.textField(pTarget, query=True, text=True)
-    
-    print("startTime", startTime)
-    print("endTime", endTime)
-    print("target", target)
-    
+   
 
-createUI('My Title', applyCallback)
+class Point:
+    def __init__(self, pos):        
+        self.pos = pos
 
-def algorithm: 
-    #randomize---------------------------------------------------------------------
-    N = 900
-    x = -5 + 5* np.random.rand(N)
-    y = 0.7 +  5* np.random.rand(N)
-    z = -5 + 5*np.random.rand(N)
+class MyBaseClass(object):
+        foo = 4
 
+class TreeNode(MyBaseClass, NodeMixin):
+    def __init__(self, name, pos, rad=None, pts=None, parent=None, children=None):
+        super(TreeNode, self).__init__()
+        self.name = name
+        self.rad = rad
+        self.pos = pos
+        self.pts = pts
+        self.parent = parent
+        if children:
+            self.children = children
+    def addChild(self, node):
+        if self.children:
+            np.append(self.children, node)             
+          
+    def addPts(self, pos):
+        if self.pts == None:
+            self.pts = [pos]
+        else: 
+            self.pts.append(pos)
+            
+def getPoint(x1, x2, x3, t) :
+    u = np.random.rand() * 100
+    
+    mag = math.sqrt(x1*x1 + x2*x2 + x3*x3)
+    x1 /= mag; x2 /= mag; x3 /= mag
+    c = u ** (1. / 3)
+
+    return [x1*c, x2*c, x3*c]
+
+                        
+def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc): 
+    
     #make a list of spheres/points--------------------------------------------------
 
-    class Point:
-        def __init__(self, pos):
-            self.pos = pos
-        
     cmds.polySphere(r=0.07)
     result = cmds.ls(orderedSelection = True)
     transformName = result[0]
@@ -70,41 +107,32 @@ def algorithm:
     
     #create instances and add to group    
     list_pts = []
-    for i in range(N):        
-        instanceResult = cmds.instance(transformName, name=transformName+'_instance#')
-        cmds.parent(instanceResult, instanceGroupName)
-        cmds.move(x[i], y[i], z[i], instanceResult)
-        list_pts.append(Point([ x[i], y[i], z[i] ]))
- 
+    
+    if pCirc == False:
+        N = pPts
+        x = -7 + 7 * np.random.rand(N)
+        y = pTrunk + 5 * np.random.rand(N)
+        z = -7 + 7 * np.random.rand(N)
+        for i in range(N):   
+            instanceResult = cmds.instance(transformName, name=transformName+'_instance#')
+            cmds.parent(instanceResult, instanceGroupName)
+            cmds.move(x[i], y[i], z[i], instanceResult)
+            list_pts.append(Point([ x[i], y[i], z[i] ]))
+    else:
+        for i in range(pPts):   
+            x1 = -7 + 14 * np.random.rand()
+            x2 = pTrunk + 5 * np.random.rand()
+            x3 = -7 + 14 * np.random.rand()
+            pt = getPoint( x1, x2, x3, pTrunk )
+            #spt = [x1,x2,x3]
+            instanceResult = cmds.instance(transformName, name=transformName+'_instance#')
+            cmds.parent(instanceResult, instanceGroupName)
+            cmds.move(pt[0], pt[1], pt[2], instanceResult)
+            list_pts.append(Point(pt)) 
+                  
     cmds.hide(transformName)
 
-    #with the random points, start from a beginning tree node----------------------------
-
-    class MyBaseClass(object):
-        foo = 4
-
-    class TreeNode(MyBaseClass, NodeMixin):
-        def __init__(self, name, pos, rad=None, pts=None, parent=None, children=None):
-             super(TreeNode, self).__init__()
-             self.name = name
-             self.rad = rad
-             self.pos = pos
-             self.pts = pts
-             self.parent = parent
-             if children:
-                 self.children = children
-             
-        def addChild(self, node):
-            if self.children:
-                np.append(self.children, node)             
-          
-        def addPts(self, pos):
-            if self.pts == None:
-                self.pts = [pos]
-            else: 
-                self.pts.append(pos)
-
-
+    
     #tree formation--------------------------------------------------------------
   
     boundPts = cmds.exactWorldBoundingBox(transformName+'_instance_grp1')
@@ -135,7 +163,7 @@ def algorithm:
     root = TreeNode('root', [midx, 0, midz])
 
     list_node =[root]
-    init_num = 20
+    init_num = pInit
     init = root
 
     points=points_lim
@@ -172,14 +200,14 @@ def algorithm:
     #space colonization---------------------------------------------------------
     
     #radius of influence/kill distance
-    i_d = 0.8
-    k_d = 0.7
+    i_d = pIR
+    k_d = pKR
 
     #check through the pts and find the closest tree node
     cmds.select( clear=True )
     result = cmds.ls(orderedSelection = True)
 
-    iter = 20
+    iter = pIter
     for i in range(iter):  
         #np array of points
         points_np = np.asarray(points)
@@ -234,7 +262,6 @@ def algorithm:
         #check for kill distance
         points.extend(new_points)    
         new_points_np = np.asarray(points)
-        print(new_points_np)
         vor2 = Voronoi(new_points_np)
 
         points_to_remove = []
@@ -272,7 +299,6 @@ def algorithm:
         else:
             #no children
             root.rad = 0.05    
-    #    print("name:", root.name, " RADII:", root.rad)
         return root.rad
     
 
@@ -296,3 +322,28 @@ def algorithm:
 
     cmds.hide(transformName)
     cmds.delete(transformName)
+
+ 
+def applyCallback(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc, *pArgs):
+    print('Apply button pressed')
+    
+    a_pts = cmds.intField(pPts, query=True, value=True)
+    iter = cmds.intField(pIter, query=True, value=True)
+    init = cmds.intField(pInit, query=True, value=True)
+    ir = cmds.floatField(pIR, query=True, value=True)
+    kr = cmds.floatField(pKR, query=True, value=True)
+    trunk = cmds.floatField(pTrunk, query=True, value=True)
+    circ = cmds.checkBox(pCirc, query=True, value=True )
+
+
+    print("attraction pts:", a_pts)
+    print("iteration:", iter)
+    print("intL", init)
+    print("ir:", ir)
+    print("kr:", kr)
+    print("circ:", circ)
+    
+    algorithm(a_pts, iter, init, ir, kr, trunk, circ)
+
+
+createUI('My Title', applyCallback)
