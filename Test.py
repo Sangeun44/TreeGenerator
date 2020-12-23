@@ -124,9 +124,9 @@ def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc, pGrav):
             list_pts.append(Point([ x[i], y[i], z[i] ]))
     else:
         for i in range(pPts):   
-            x1 = -7 + 14 * np.random.rand()
+            x1 = -7 + 28 * np.random.rand()
             x2 = pTrunk + 5 * np.random.rand()
-            x3 = -7 + 14 * np.random.rand()
+            x3 = -7 + 28 * np.random.rand()
             pt = getPoint( x1, x2, x3, pTrunk )
             #spt = [x1,x2,x3]
             instanceResult = cmds.instance(transformName, name=transformName+'_instance#')
