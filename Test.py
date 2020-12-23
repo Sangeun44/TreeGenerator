@@ -35,11 +35,11 @@ def createUI( pWindowTitle, pApplyCallback) :
     cmds.separator(h=10,style='none')
 
     cmds.text(label='Influence distance:')
-    i_rad = cmds.floatField(value=0.4)
+    i_rad = cmds.floatField(value=0.9)
     cmds.separator(h=10,style='none')
 
     cmds.text(label='Kill distance:')
-    k_rad = cmds.floatField(value=0.3)
+    k_rad = cmds.floatField(value=0.8)
     cmds.separator(h=10,style='none')    
         
     cmds.text(label='Height of Trunk:')
@@ -47,7 +47,7 @@ def createUI( pWindowTitle, pApplyCallback) :
     cmds.separator(h=10,style='none')
     
     cmds.text(label='gravity:')
-    grav = cmds.floatField(value=0.0000001)
+    grav = cmds.floatField(value=0.09)
     cmds.separator(h=10,style='none')
     
     cmds.text(label='')
@@ -249,11 +249,11 @@ def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc, pGrav):
                 #normalize the sum vector
                 len = length(vec)
                 vec = [vec[0]/len, vec[1]/len, vec[2]/len]
-                print("vec1",vec)
+                
                 vec = [vec[0], vec[1]-pGrav, vec[2]]
                 len = length(vec)
                 vec = [vec[0]/len, vec[1]/len, vec[2]/len]
-                print("vec2", vec)
+
                 #create new node
                 instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')
                 cmds.parent(instanceResult, instanceGroupName) 
