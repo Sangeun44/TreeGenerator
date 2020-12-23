@@ -27,15 +27,15 @@ def createUI( pWindowTitle, pApplyCallback) :
     cmds.separator(h=10,style='none')
 
     cmds.text(label='# Iterations:')
-    iter = cmds.intField(value=20)
+    iter = cmds.intField(value=15)
     cmds.separator(h=10,style='none')
     
     cmds.text(label='# Initial Nodes:')
-    int_node = cmds.intField(value=20)
+    int_node = cmds.intField(value=12)
     cmds.separator(h=10,style='none')
 
     cmds.text(label='Influence distance:')
-    i_rad = cmds.floatField(value=0.9)
+    i_rad = cmds.floatField(value=0.83)
     cmds.separator(h=10,style='none')
 
     cmds.text(label='Kill distance:')
@@ -43,7 +43,7 @@ def createUI( pWindowTitle, pApplyCallback) :
     cmds.separator(h=10,style='none')    
         
     cmds.text(label='Height of Trunk:')
-    trunk = cmds.floatField(value=0.7)
+    trunk = cmds.floatField(value=1)
     cmds.separator(h=10,style='none')
     
     cmds.text(label='gravity:')
