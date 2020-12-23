@@ -22,7 +22,7 @@ def createUI( pWindowTitle, pApplyCallback) :
     
     cmds.rowColumnLayout( numberOfColumns=3, columnWidth=[(1,150), (2, 60), (3,60)], columnOffset=[(1, 'right', 3)] )
     
-    cmds.text(label='# Atraction points:')
+    cmds.text(label='# Attraction points:')
     attractPts = cmds.intField(value=900)
     cmds.separator(h=10,style='none')
 
@@ -47,7 +47,7 @@ def createUI( pWindowTitle, pApplyCallback) :
     cmds.separator(h=10,style='none')
     
     cmds.text(label='gravity:')
-    grav = cmds.floatField(value=0.09)
+    grav = cmds.floatField(value=0.01)
     cmds.separator(h=10,style='none')
     
     cmds.text(label='')
