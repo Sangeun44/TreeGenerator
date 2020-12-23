@@ -35,15 +35,19 @@ def createUI( pWindowTitle, pApplyCallback) :
     cmds.separator(h=10,style='none')
 
     cmds.text(label='Influence distance:')
-    i_rad = cmds.floatField(value=0.8)
+    i_rad = cmds.floatField(value=0.4)
     cmds.separator(h=10,style='none')
 
     cmds.text(label='Kill distance:')
-    k_rad = cmds.floatField(value=0.7)
+    k_rad = cmds.floatField(value=0.3)
     cmds.separator(h=10,style='none')    
         
     cmds.text(label='Height of Trunk:')
     trunk = cmds.floatField(value=0.7)
+    cmds.separator(h=10,style='none')
+    
+    cmds.text(label='gravity:')
+    grav = cmds.floatField(value=0.0000001)
     cmds.separator(h=10,style='none')
     
     cmds.text(label='')
@@ -54,7 +58,7 @@ def createUI( pWindowTitle, pApplyCallback) :
         if cmds.window(windowID, exists=True):
             cmds.deleteUI(windowID)
             
-    cmds.button(label='Apply', command=functools.partial(pApplyCallback, attractPts, iter, int_node, i_rad, k_rad, trunk, circ))
+    cmds.button(label='Apply', command=functools.partial(pApplyCallback, attractPts, iter, int_node, i_rad, k_rad, trunk, circ, grav))
     cmds.button(label='Cancel', command=cancelCallback)
     cmds.showWindow()
    
@@ -96,7 +100,7 @@ def getPoint(x1, x2, x3, t) :
     return [x1*c, x2*c, x3*c]
 
                         
-def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc): 
+def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc, pGrav): 
     
     #make a list of spheres/points--------------------------------------------------
 
@@ -206,7 +210,6 @@ def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc):
     #check through the pts and find the closest tree node
     cmds.select( clear=True )
     result = cmds.ls(orderedSelection = True)
-
     iter = pIter
     for i in range(iter):  
         #np array of points
@@ -246,7 +249,11 @@ def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc):
                 #normalize the sum vector
                 len = length(vec)
                 vec = [vec[0]/len, vec[1]/len, vec[2]/len]
-
+                print("vec1",vec)
+                vec = [vec[0], vec[1]-pGrav, vec[2]]
+                len = length(vec)
+                vec = [vec[0]/len, vec[1]/len, vec[2]/len]
+                print("vec2", vec)
                 #create new node
                 instanceResult = cmds.polySphere(transformName,r=0.1, name=transformName+'_instance#')
                 cmds.parent(instanceResult, instanceGroupName) 
@@ -324,7 +331,7 @@ def algorithm(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc):
     cmds.delete(transformName)
 
  
-def applyCallback(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc, *pArgs):
+def applyCallback(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc, pGrav, *pArgs):
     print('Apply button pressed')
     
     a_pts = cmds.intField(pPts, query=True, value=True)
@@ -333,17 +340,18 @@ def applyCallback(pPts, pIter, pInit, pIR, pKR, pTrunk, pCirc, *pArgs):
     ir = cmds.floatField(pIR, query=True, value=True)
     kr = cmds.floatField(pKR, query=True, value=True)
     trunk = cmds.floatField(pTrunk, query=True, value=True)
+    grav = cmds.floatField(pGrav, query=True, value=True)
     circ = cmds.checkBox(pCirc, query=True, value=True )
-
 
     print("attraction pts:", a_pts)
     print("iteration:", iter)
     print("intL", init)
     print("ir:", ir)
     print("kr:", kr)
+    print("grav:", grav)
     print("circ:", circ)
     
-    algorithm(a_pts, iter, init, ir, kr, trunk, circ)
+    algorithm(a_pts, iter, init, ir, kr, trunk, circ, grav)
 
 
 createUI('My Title', applyCallback)
